@@ -2,9 +2,13 @@
 module.exports = {
   darkMode: ["class"],
   content: [
+    './src/**/*.{js,ts,jsx,tsx,mdx}',
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+    './pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './components/**/*.{js,ts,jsx,tsx,mdx}',
+    './app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
     container: {
@@ -16,77 +20,65 @@ module.exports = {
     },
     extend: {
       colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
-        primary: {
-          DEFAULT: "#1e293b", // Slate 800
-          foreground: "#f8fafc",
-          50: '#f8fafc',
-          100: '#f1f5f9',
-          500: '#64748b',
-          600: '#475569',
-          700: '#334155',
-          800: '#1e293b',
-          900: '#0f172a',
-          gold: '#d97706', // Gold accent for luxury theme
+        border: "#E5E7EB",
+        input: "#E5E7EB",
+        ring: "#C9A227",
+        background: "#F7F8FA",
+        foreground: "#111827",
+        luxnavy: {
+          950: '#070C15',
+          900: '#0B1220', // Primary Dark
+          800: '#111827', // Secondary Dark
+          700: '#0F1B2D', // Deep Navy
+          600: '#172033', // Card Dark
+          500: '#273449', // Border Dark
         },
         gold: {
-          50: '#fffbeb',
-          100: '#fef3c7',
-          500: '#f59e0b',
-          600: '#d97706',
-          700: '#b45309',
+          50: '#F3E7C3', // Warm Champagne
+          100: '#E9D6A0',
+          400: '#E4C766', // Soft Gold
+          500: '#C9A227', // Luxury Gold
+          600: '#A6841B',
+          700: '#846713',
+        },
+        saas: {
+          bg: '#F7F8FA',
+          card: '#FFFFFF',
+          darkCard: '#172033',
+          darkPanel: '#0B1220',
+          darkBorder: '#273449',
+          darkSubtext: '#CBD5E1',
+          text: '#111827',
+          muted: '#64748B',
+          border: '#E5E7EB',
+          navy: '#0B1220',
+          secNavy: '#111827',
+          softNavy: '#0F1B2D',
+          gold: '#C9A227',
+          softGold: '#E4C766',
+          champagne: '#F3E7C3',
+          success: '#168A63',
+          warning: '#C58A12',
+          danger: '#C24141',
+          info: '#3B6EA8',
+        },
+        primary: {
+          DEFAULT: "#0B1220",
+          foreground: "#FFFFFF",
         },
         sidebar: {
-          bg: '#0f172a',
-          hover: '#1e293b',
-          active: '#334155',
-          text: '#94a3b8',
-          textActive: '#f8fafc',
-          border: '#1e293b'
-        },
-        secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
-        },
-        destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
-        },
-        muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
-        },
-        accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
-        },
-        card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
+          bg: '#0B1220',
+          hover: 'rgba(15, 27, 45, 0.6)',
+          active: '#0F1B2D',
+          text: '#FFFFFF',
+          textMuted: '#94A3B8',
+          border: '#172033'
         },
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
-      },
-      keyframes: {
-        "accordion-down": {
-          from: { height: "0" },
-          to: { height: "var(--radix-accordion-content-height)" },
-        },
-        "accordion-up": {
-          from: { height: "var(--radix-accordion-content-height)" },
-          to: { height: "0" },
-        },
-      },
-      animation: {
-        "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out",
       },
     },
   },
