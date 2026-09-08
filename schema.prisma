@@ -25,28 +25,44 @@ model User {
 }
 
 model Guest {
-  id            String   @id @default(uuid())
-  name          String
-  email         String?
-  phone         String
-  address       String?
-  dateOfBirth   String?
-  idType        String?  // Passport, Driving License, Aadhaar, National ID
-  idNumber      String?
-  nationality   String   @default("Indian")
-  preferences   String?  // JSON or text: e.g. "Non-smoking, High Floor, Extra Pillows"
-  totalStays    Int      @default(0)
-  totalSpending Float    @default(0.0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                  String   @id @default(uuid())
+  name                String
+  email               String?
+  phone               String
+  address             String?
+  dateOfBirth         String?
+  idType              String?  // Passport, Driving License, Aadhaar, National ID
+  idNumber            String?
+  nationality         String   @default("Indian")
+  preferences         String?  // JSON or text: e.g. "Non-smoking, High Floor, Extra Pillows"
+  dietaryPreference   String?  // Vegetarian, Jain, Vegan, Gluten-Free, Non-Veg
+  favoriteRoomType    String?  // Deluxe Room, Suite, Executive Suite
+  specialRequests     String?
+  segment             String   @default("NEW") // NEW, REGULAR, VIP, HIGH_SPENDING, AT_RISK
+  loyaltyTier         String   @default("BRONZE") // BRONZE, SILVER, GOLD, PLATINUM
+  loyaltyPoints       Int      @default(0)
+  totalPointsEarned   Int      @default(0)
+  totalPointsRedeemed Int      @default(0)
+  totalStays          Int      @default(0)
+  totalSpending       Float    @default(0.0)
+  lastVisitDate       DateTime?
+  isAtRisk            Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
-  documents     GuestDocument[]
-  reservations  Reservation[]
-  checkIns      CheckIn[]
-  checkOuts     CheckOut[]
-  invoices      Invoice[]
-  foodOrders    FoodOrder[]
-  reviews       Review[]
+  documents           GuestDocument[]
+  reservations        Reservation[]
+  checkIns            CheckIn[]
+  checkOuts           CheckOut[]
+  invoices            Invoice[]
+  foodOrders          FoodOrder[]
+  reviews             Review[]
+  hallBookings        HallBooking[]
+  events              Event[]
+  notes               GuestNote[]
+  loyaltyTransactions LoyaltyTransaction[]
+  rewardRedemptions   RewardRedemption[]
+  communicationLogs   CommunicationLog[]
 }
 
 model GuestDocument {
@@ -75,18 +91,26 @@ model RoomType {
 }
 
 model Room {
-  id            String   @id @default(uuid())
-  roomNumber    String   @unique
-  roomTypeId    String
-  floor         Int      @default(1)
-  pricePerNight Float
-  capacity      Int      @default(2)
-  bedType       String   @default("King")
-  amenities     String
-  status        String   @default("AVAILABLE") // AVAILABLE, OCCUPIED, RESERVED, CLEANING, MAINTENANCE, OUT_OF_SERVICE
-  notes         String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                  String   @id @default(uuid())
+  roomNumber          String   @unique
+  roomTypeId          String
+  floor               Int      @default(1)
+  building            String   @default("Main Wing")
+  pricePerNight       Float
+  weekendPrice        Float    @default(0.0)
+  extraGuestPrice     Float    @default(500.0)
+  capacity            Int      @default(2)
+  bedType             String   @default("King")
+  numberOfBeds        Int      @default(1)
+  roomSize            Int      @default(35)
+  amenities           String
+  image               String?
+  status              String   @default("AVAILABLE") // AVAILABLE, OCCUPIED, RESERVED, CLEANING, MAINTENANCE, OUT_OF_SERVICE
+  housekeepingStatus  String   @default("CLEAN") // CLEAN, DIRTY, CLEANING, INSPECTION, READY
+  isArchived          Boolean  @default(false)
+  notes               String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   roomType            RoomType              @relation(fields: [roomTypeId], references: [id])
   reservations        Reservation[]
@@ -169,6 +193,7 @@ model Payment {
   reservationId String?
   orderId       String?
   invoiceId     String?
+  eventId       String?
   amount        Float
   method        String   @default("CASH") // CASH, UPI, CARD, BANK_TRANSFER
   status        String   @default("PAID") // PAID, PARTIAL, PENDING, REFUNDED
@@ -179,6 +204,7 @@ model Payment {
   reservation Reservation? @relation(fields: [reservationId], references: [id])
   foodOrder   FoodOrder?   @relation(fields: [orderId], references: [id])
   invoice     Invoice?     @relation(fields: [invoiceId], references: [id])
+  event       Event?       @relation(fields: [eventId], references: [id])
 }
 
 model Invoice {
@@ -187,6 +213,7 @@ model Invoice {
   guestId        String
   reservationId  String?
   checkOutId     String?
+  eventId        String?
   issueDate      DateTime @default(now())
   dueDate        DateTime?
   subtotal       Float
@@ -199,6 +226,7 @@ model Invoice {
 
   guest       Guest        @relation(fields: [guestId], references: [id])
   reservation Reservation? @relation(fields: [reservationId], references: [id])
+  event       Event?       @relation(fields: [eventId], references: [id])
   payments    Payment[]
 }
 
@@ -396,21 +424,54 @@ model Supplier {
   contactPerson String?
   email         String?
   phone         String
+  category      String   @default("Food") // Food, Beverage, Linen, Cleaning, Equipment, Other
+  status        String   @default("Active") // Active, Inactive
   address       String?
+  notes         String?
+  createdAt     DateTime @default(now())
 
   ingredients Ingredient[]
   purchases   Purchase[]
+  products    SupplierProduct[]
+}
+
+model SupplierProduct {
+  id               String    @id @default(uuid())
+  supplierId       String
+  name             String
+  category         String    @default("General") // Food, Dairy, Beverage, Linen, Cleaning, Equipment, Service
+  type             String    @default("PRODUCT") // PRODUCT, SERVICE
+  description      String?
+  unit             String    @default("Pcs") // Liter, Kg, 500 ml, 100 g, Pcs, Case, Unit, Pack, Job
+  purchasePrice    Float     @default(0.0)
+  moq              Float     @default(1.0)
+  reorderLevel     Float     @default(10.0)
+  currentStock     Float     @default(0.0)
+  taxRate          Float     @default(18.0)
+  status           String    @default("ACTIVE") // ACTIVE, INACTIVE
+  lastPurchaseDate DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  supplier  Supplier   @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  purchases Purchase[]
 }
 
 model Purchase {
   id           String   @id @default(uuid())
   supplierId   String
+  productId    String?
   itemNames    String
+  quantity     String   @default("1")
+  unitPrice    Float    @default(0.0)
+  taxAmount    Float    @default(0.0)
   totalCost    Float
-  status       String   @default("COMPLETED") // PENDING, ORDERED, COMPLETED
+  status       String   @default("PENDING") // PENDING, RECEIVED, CANCELLED, COMPLETED
+  notes        String?
   purchaseDate DateTime @default(now())
 
-  supplier Supplier @relation(fields: [supplierId], references: [id])
+  supplier        Supplier         @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  supplierProduct SupplierProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
 }
 
 model InventoryTransaction {
@@ -504,3 +565,185 @@ model AIRecommendation {
   isDismissed    Boolean  @default(false)
   createdAt      DateTime @default(now())
 }
+
+model Hall {
+  id                   String   @id @default(uuid())
+  name                 String   @unique
+  slug                 String   @unique
+  description          String?
+  sizeSqFt             Int
+  capacity             Int
+  theatreCapacity      Int      @default(0)
+  roundTableCapacity   Int      @default(0)
+  classroomCapacity    Int      @default(0)
+  boardroomCapacity    Int      @default(0)
+  pricePerDay          Float
+  status               String   @default("AVAILABLE") // AVAILABLE, BOOKED, RESERVED, MAINTENANCE
+  imageUrl             String
+  amenities            String   // Comma separated e.g. "Stage, Sound System, AC, Projector"
+  suitableFor          String   // Comma separated e.g. "Weddings, Conferences, Receptions"
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  bookings             HallBooking[]
+  events               Event[]
+}
+
+model HallBooking {
+  id                   String   @id @default(uuid())
+  bookingCode          String   @unique
+  hallId               String
+  guestId              String?
+  customerName         String
+  customerPhone        String
+  customerEmail        String?
+  eventType            String   // Wedding, Reception, Birthday, Engagement, Corporate Event, Conference, Seminar, Meeting, Workshop, Other
+  eventDate            DateTime
+  startTime            String   @default("09:00 AM")
+  endTime              String   @default("06:00 PM")
+  guestCount           Int
+  specialRequirements  String?
+  hallCharge           Float
+  decorationCharge     Float    @default(0.0)
+  cateringCharge       Float    @default(0.0)
+  extraEquipmentCharge Float    @default(0.0)
+  tax                  Float    @default(0.0)
+  totalAmount          Float
+  paymentStatus        String   @default("PENDING") // PENDING, PAID, PARTIAL
+  bookingStatus        String   @default("CONFIRMED") // CONFIRMED, PENDING, COMPLETED, CANCELLED
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  hall                 Hall     @relation(fields: [hallId], references: [id], onDelete: Cascade)
+  guest                Guest?   @relation(fields: [guestId], references: [id])
+}
+
+model Event {
+  id                   String   @id @default(uuid())
+  eventNumber          String   @unique // EVT-2026-0001
+  name                 String
+  eventType            String   // Wedding, Reception, Engagement, Birthday Party, Anniversary, Corporate Event, Conference, Seminar, Workshop, Product Launch, Training Program, Business Meeting, Private Party, Social Gathering, Other
+  guestId              String?
+  customerName         String
+  customerPhone        String
+  customerEmail        String?
+  companyName          String?
+  gstNumber            String?
+  hallId               String
+  eventDate            DateTime
+  startTime            String   @default("09:00 AM")
+  endTime              String   @default("06:00 PM")
+  expectedGuests       Int
+  seatingArrangement   String   @default("Banquet") // Theatre, Round Table, Classroom, Boardroom, U-Shape, Banquet, Custom
+  description          String?
+  specialRequirements  String?
+  
+  // Pricing breakdown
+  hallCharge           Float    @default(0.0)
+  cateringType         String   @default("NONE") // NONE, PER_PERSON, FIXED_PACKAGE, CUSTOM_MENU
+  cateringPricePerPerson Float  @default(0.0)
+  cateringItemsJson    String?  // JSON string of selected menu items with qty & price
+  cateringAmount       Float    @default(0.0)
+  
+  decorationType       String   @default("BASIC") // BASIC, STANDARD, PREMIUM, LUXURY, CUSTOM
+  decorationAmount     Float    @default(0.0)
+  
+  servicesJson         String?  // JSON string of additional services (DJ, Photography, LED Wall, etc.)
+  servicesAmount       Float    @default(0.0)
+  
+  subtotal             Float    @default(0.0)
+  discountType         String   @default("FIXED") // FIXED, PERCENTAGE
+  discountValue        Float    @default(0.0)
+  discountAmount       Float    @default(0.0)
+  taxRate              Float    @default(18.0) // 18% GST default
+  taxAmount            Float    @default(0.0)
+  grandTotal           Float    @default(0.0)
+  
+  advancePayment       Float    @default(0.0)
+  paidAmount           Float    @default(0.0)
+  remainingAmount      Float    @default(0.0)
+  paymentStatus        String   @default("PENDING") // PENDING, PARTIAL, PAID, REFUNDED
+  bookingStatus        String   @default("CONFIRMED") // DRAFT, PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED
+  
+  checklistJson        String?  // JSON checklist of operational tasks
+  staffAssignmentsJson String?  // JSON string of assigned staff profiles
+  
+  cancellationReason   String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  guest                Guest?   @relation(fields: [guestId], references: [id])
+  hall                 Hall     @relation(fields: [hallId], references: [id], onDelete: Cascade)
+  payments             Payment[]
+  invoices             Invoice[]
+}
+
+model GuestNote {
+  id         String   @id @default(uuid())
+  guestId    String
+  authorName String   @default("Admin")
+  content    String
+  createdAt  DateTime @default(now())
+
+  guest Guest @relation(fields: [guestId], references: [id], onDelete: Cascade)
+}
+
+model LoyaltyTransaction {
+  id            String   @id @default(uuid())
+  guestId       String
+  type          String   // EARNED, REDEEMED, ADJUSTED, EXPIRED
+  referenceType String   // ROOM_BOOKING, RESTAURANT_ORDER, EVENT_BOOKING, REWARD_REDEMPTION, MANUAL
+  referenceId   String?
+  amountSpent   Float    @default(0.0)
+  points        Int
+  balanceAfter  Int
+  status        String   @default("COMPLETED") // COMPLETED, CANCELLED
+  notes         String?
+  createdAt     DateTime @default(now())
+
+  guest Guest @relation(fields: [guestId], references: [id], onDelete: Cascade)
+}
+
+model LoyaltyReward {
+  id             String   @id @default(uuid())
+  name           String
+  description    String?
+  pointsRequired Int
+  rewardType     String   // DISCOUNT, FREE_SERVICE, UPGRADE, COMPLIMENTARY
+  rewardValue    Float    @default(0.0)
+  expiryDays     Int      @default(30)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  redemptions RewardRedemption[]
+}
+
+model RewardRedemption {
+  id             String    @id @default(uuid())
+  redemptionCode String    @unique // LR-2026-000125
+  guestId        String
+  rewardId       String
+  pointsUsed     Int
+  status         String    @default("REDEEMED") // REDEEMED, USED, EXPIRED, CANCELLED
+  expiresAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  guest  Guest         @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  reward LoyaltyReward @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+}
+
+model CommunicationLog {
+  id          String   @id @default(uuid())
+  guestId     String
+  channel     String   // WHATSAPP, EMAIL, CALL, SMS
+  messageType String   // BIRTHDAY_WISH, THANK_YOU, FEEDBACK_REQUEST, LOYALTY_OFFER, CUSTOM
+  subject     String?
+  content     String
+  status      String   @default("SENT") // DRAFT, QUEUED, SENT, FAILED
+  sentAt      DateTime @default(now())
+
+  guest Guest @relation(fields: [guestId], references: [id], onDelete: Cascade)
+}
+
+

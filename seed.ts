@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { menuSeedData } from './seedData/menuData';
 
 const prisma = new PrismaClient();
 
@@ -37,7 +38,11 @@ async function main() {
   await prisma.room.deleteMany();
   await prisma.roomType.deleteMany();
   await prisma.guestDocument.deleteMany();
+  await prisma.rewardRedemption.deleteMany();
+  await prisma.loyaltyTransaction.deleteMany();
+  await prisma.loyaltyReward.deleteMany();
   await prisma.guest.deleteMany();
+  await prisma.supplierProduct.deleteMany();
   await prisma.supplier.deleteMany();
   await prisma.user.deleteMany();
 
@@ -251,31 +256,55 @@ async function main() {
 
   console.log('✅ Room Types created');
 
-  // 4. Create 20 Rooms (101 to 120)
+  // 4. Create 40 Rooms (101-110, 201-210, 301-310, 401-410)
   const roomDefinitions = [
+    // Floor 1 (101 - 110)
     { num: '101', type: standardType, floor: 1, status: 'AVAILABLE' },
     { num: '102', type: standardType, floor: 1, status: 'OCCUPIED' },
     { num: '103', type: standardType, floor: 1, status: 'AVAILABLE' },
     { num: '104', type: standardType, floor: 1, status: 'CLEANING' },
     { num: '105', type: standardType, floor: 1, status: 'RESERVED' },
-
     { num: '106', type: deluxeType, floor: 1, status: 'AVAILABLE' },
     { num: '107', type: deluxeType, floor: 1, status: 'OCCUPIED' },
     { num: '108', type: deluxeType, floor: 1, status: 'AVAILABLE' },
     { num: '109', type: deluxeType, floor: 1, status: 'MAINTENANCE' },
     { num: '110', type: deluxeType, floor: 1, status: 'OCCUPIED' },
 
+    // Floor 2 (201 - 210)
     { num: '201', type: premiumType, floor: 2, status: 'OCCUPIED' },
     { num: '202', type: premiumType, floor: 2, status: 'AVAILABLE' },
     { num: '203', type: premiumType, floor: 2, status: 'RESERVED' },
     { num: '204', type: premiumType, floor: 2, status: 'OCCUPIED' },
     { num: '205', type: premiumType, floor: 2, status: 'AVAILABLE' },
+    { num: '206', type: deluxeType, floor: 2, status: 'AVAILABLE' },
+    { num: '207', type: deluxeType, floor: 2, status: 'OCCUPIED' },
+    { num: '208', type: premiumType, floor: 2, status: 'AVAILABLE' },
+    { num: '209', type: premiumType, floor: 2, status: 'CLEANING' },
+    { num: '210', type: premiumType, floor: 2, status: 'OCCUPIED' },
 
+    // Floor 3 (301 - 310)
     { num: '301', type: suiteType, floor: 3, status: 'OCCUPIED' },
     { num: '302', type: suiteType, floor: 3, status: 'AVAILABLE' },
     { num: '303', type: suiteType, floor: 3, status: 'CLEANING' },
     { num: '304', type: familyType, floor: 3, status: 'OCCUPIED' },
     { num: '305', type: familyType, floor: 3, status: 'AVAILABLE' },
+    { num: '306', type: suiteType, floor: 3, status: 'RESERVED' },
+    { num: '307', type: suiteType, floor: 3, status: 'OCCUPIED' },
+    { num: '308', type: familyType, floor: 3, status: 'AVAILABLE' },
+    { num: '309', type: familyType, floor: 3, status: 'MAINTENANCE' },
+    { num: '310', type: suiteType, floor: 3, status: 'AVAILABLE' },
+
+    // Floor 4 (401 - 410)
+    { num: '401', type: suiteType, floor: 4, status: 'AVAILABLE' },
+    { num: '402', type: suiteType, floor: 4, status: 'OCCUPIED' },
+    { num: '403', type: suiteType, floor: 4, status: 'AVAILABLE' },
+    { num: '404', type: familyType, floor: 4, status: 'AVAILABLE' },
+    { num: '405', type: familyType, floor: 4, status: 'RESERVED' },
+    { num: '406', type: suiteType, floor: 4, status: 'AVAILABLE' },
+    { num: '407', type: suiteType, floor: 4, status: 'OCCUPIED' },
+    { num: '408', type: familyType, floor: 4, status: 'AVAILABLE' },
+    { num: '409', type: familyType, floor: 4, status: 'AVAILABLE' },
+    { num: '410', type: suiteType, floor: 4, status: 'AVAILABLE' },
   ];
 
   const createdRooms: Record<string, any> = {};
@@ -285,11 +314,18 @@ async function main() {
         roomNumber: rDef.num,
         roomTypeId: rDef.type.id,
         floor: rDef.floor,
+        building: rDef.floor === 4 ? 'Penthouse Wing' : rDef.floor === 3 ? 'Executive Wing' : rDef.floor === 2 ? 'Ocean Wing' : 'Main Wing',
         pricePerNight: rDef.type.basePrice,
+        weekendPrice: Math.round(rDef.type.basePrice * 1.2),
+        extraGuestPrice: 800,
         capacity: rDef.type.capacity,
         bedType: rDef.type.bedType,
+        numberOfBeds: rDef.type.bedType.includes('Twin') || rDef.type.bedType.includes('Double') ? 2 : 1,
+        roomSize: rDef.type.code === 'STE' ? 85 : rDef.type.code === 'PRM' ? 55 : rDef.type.code === 'FAM' ? 65 : rDef.type.code === 'DLX' ? 45 : 32,
         amenities: rDef.type.amenities,
+        image: rDef.type.image,
         status: rDef.status,
+        housekeepingStatus: rDef.status === 'CLEANING' ? 'CLEANING' : rDef.status === 'MAINTENANCE' ? 'DIRTY' : 'CLEAN',
         notes: `Floor ${rDef.floor} room`,
       },
     });
@@ -297,7 +333,7 @@ async function main() {
   }
   console.log('✅ 20 Rooms created');
 
-  // 5. Guests
+  // 5. Guests with Dynamic Loyalty Points & Tiers
   const guest1 = await prisma.guest.create({
     data: {
       name: 'Rahul Patel',
@@ -309,8 +345,12 @@ async function main() {
       idNumber: '8876 5432 1098',
       nationality: 'Indian',
       preferences: 'High Floor, Non-Smoking, Cold Coffee lover',
-      totalStays: 4,
-      totalSpending: 42500,
+      loyaltyTier: 'BRONZE',
+      loyaltyPoints: 74,
+      totalPointsEarned: 74,
+      totalPointsRedeemed: 0,
+      totalStays: 1,
+      totalSpending: 7400,
     },
   });
 
@@ -325,8 +365,12 @@ async function main() {
       idNumber: 'Z9876543',
       nationality: 'Indian',
       preferences: 'Sea view room, Extra towels, Soft pillows',
+      loyaltyTier: 'SILVER',
+      loyaltyPoints: 365,
+      totalPointsEarned: 365,
+      totalPointsRedeemed: 0,
       totalStays: 2,
-      totalSpending: 24000,
+      totalSpending: 36500,
     },
   });
 
@@ -341,8 +385,12 @@ async function main() {
       idNumber: 'DL-04201994852',
       nationality: 'Indian',
       preferences: 'Early check-in request, Vegetarian food only',
-      totalStays: 6,
-      totalSpending: 68000,
+      loyaltyTier: 'BRONZE',
+      loyaltyPoints: 0,
+      totalPointsEarned: 0,
+      totalPointsRedeemed: 0,
+      totalStays: 0,
+      totalSpending: 0,
     },
   });
 
@@ -357,12 +405,173 @@ async function main() {
       idNumber: '4567 8901 2345',
       nationality: 'Indian',
       preferences: 'Quiet corner room, Jain meals',
-      totalStays: 1,
-      totalSpending: 12500,
+      loyaltyTier: 'BRONZE',
+      loyaltyPoints: 0,
+      totalPointsEarned: 0,
+      totalPointsRedeemed: 0,
+      totalStays: 0,
+      totalSpending: 0,
     },
   });
 
-  console.log('✅ Guests created');
+  const guest5 = await prisma.guest.create({
+    data: {
+      name: 'Vikram Malhotra',
+      email: 'vikram.m@example.com',
+      phone: '+91 98110 55443',
+      address: '24 MG Road, Bengaluru',
+      dateOfBirth: '1982-09-12',
+      idType: 'Passport',
+      idNumber: 'P1234567',
+      nationality: 'Indian',
+      preferences: 'Corner suite, Late check-out',
+      loyaltyTier: 'GOLD',
+      loyaltyPoints: 600,
+      totalPointsEarned: 600,
+      totalPointsRedeemed: 0,
+      totalStays: 5,
+      totalSpending: 60000,
+      segment: 'VIP',
+    },
+  });
+
+  const guest6 = await prisma.guest.create({
+    data: {
+      name: 'Rajesh Mehta',
+      email: 'rajesh.mehta@example.com',
+      phone: '+91 98765 11223',
+      address: '90 Jubilee Hills, Hyderabad',
+      dateOfBirth: '1976-03-30',
+      idType: 'Aadhaar',
+      idNumber: '9988 7766 5544',
+      nationality: 'Indian',
+      preferences: 'Presidential Suite, Airport transfer',
+      loyaltyTier: 'PLATINUM',
+      loyaltyPoints: 1200,
+      totalPointsEarned: 1200,
+      totalPointsRedeemed: 0,
+      totalStays: 10,
+      totalSpending: 120000,
+      segment: 'VIP',
+    },
+  });
+
+  // 5b. Loyalty Rewards Catalog (6 Exact Rewards)
+  await prisma.loyaltyReward.create({
+    data: {
+      name: 'Complimentary Chef Dessert',
+      description: 'Enjoy a free chef-special dessert during your dining',
+      pointsRequired: 300,
+      rewardType: 'COMPLIMENTARY',
+      rewardValue: 250,
+      expiryDays: 30,
+      isActive: true,
+    },
+  });
+
+  await prisma.loyaltyReward.create({
+    data: {
+      name: '₹500 Room Rate Discount',
+      description: 'Flat ₹500 discount on your room stay invoice',
+      pointsRequired: 500,
+      rewardType: 'DISCOUNT',
+      rewardValue: 500,
+      expiryDays: 30,
+      isActive: true,
+    },
+  });
+
+  await prisma.loyaltyReward.create({
+    data: {
+      name: '15% Off Total Dining Bill',
+      description: 'Enjoy 15% discount at hotel restaurant',
+      pointsRequired: 600,
+      rewardType: 'DISCOUNT',
+      rewardValue: 15,
+      expiryDays: 30,
+      isActive: true,
+    },
+  });
+
+  await prisma.loyaltyReward.create({
+    data: {
+      name: 'Complimentary Buffet Breakfast',
+      description: 'Free morning buffet breakfast for up to 2 guests',
+      pointsRequired: 750,
+      rewardType: 'FREE_SERVICE',
+      rewardValue: 800,
+      expiryDays: 30,
+      isActive: true,
+    },
+  });
+
+  await prisma.loyaltyReward.create({
+    data: {
+      name: 'Free Airport Luxury Transfer',
+      description: 'Complimentary pick-up or drop in luxury sedan',
+      pointsRequired: 1200,
+      rewardType: 'FREE_SERVICE',
+      rewardValue: 2000,
+      expiryDays: 30,
+      isActive: true,
+    },
+  });
+
+  await prisma.loyaltyReward.create({
+    data: {
+      name: 'Complimentary Room Upgrade',
+      description: 'Free upgrade to next room category upon availability',
+      pointsRequired: 1500,
+      rewardType: 'UPGRADE',
+      rewardValue: 3500,
+      expiryDays: 30,
+      isActive: true,
+    },
+  });
+
+  // 5c. Initial Loyalty Ledger Transactions
+  await prisma.loyaltyTransaction.createMany({
+    data: [
+      {
+        guestId: guest1.id,
+        type: 'EARNED',
+        referenceType: 'ROOM_BOOKING',
+        amountSpent: 7400,
+        points: 74,
+        balanceAfter: 74,
+        notes: 'Points earned from ₹7,400 hotel spending (₹100 = 1 Point)',
+      },
+      {
+        guestId: guest2.id,
+        type: 'EARNED',
+        referenceType: 'ROOM_BOOKING',
+        amountSpent: 36500,
+        points: 365,
+        balanceAfter: 365,
+        notes: 'Points earned from ₹36,500 hotel spending (₹100 = 1 Point)',
+      },
+      {
+        guestId: guest5.id,
+        type: 'EARNED',
+        referenceType: 'ROOM_BOOKING',
+        amountSpent: 60000,
+        points: 600,
+        balanceAfter: 600,
+        notes: 'Points earned from ₹60,000 hotel spending (₹100 = 1 Point)',
+      },
+      {
+        guestId: guest6.id,
+        type: 'EARNED',
+        referenceType: 'ROOM_BOOKING',
+        amountSpent: 120000,
+        points: 1200,
+        balanceAfter: 1200,
+        notes: 'Points earned from ₹120,000 hotel spending (₹100 = 1 Point)',
+      },
+    ],
+  });
+
+  console.log('✅ Demo Guests, 6 Loyalty Rewards, and Ledger Transactions created');
 
   // 6. Reservations & Check-Ins
   const today = new Date();
@@ -488,105 +697,53 @@ async function main() {
     createdTables[t.num] = table;
   }
 
-  // 8. Menu Categories & Items
-  const catStarters = await prisma.menuCategory.create({ data: { name: 'Starters', description: 'Appetizers & finger foods', icon: 'Utensils', displayOrder: 1 } });
-  const catMains = await prisma.menuCategory.create({ data: { name: 'Main Course', description: 'Hearty Indian & Global mains', icon: 'Soup', displayOrder: 2 } });
-  const catPizza = await prisma.menuCategory.create({ data: { name: 'Pizza & Pasta', description: 'Wood-fired pizzas and pasta', icon: 'Pizza', displayOrder: 3 } });
-  const catBurgers = await prisma.menuCategory.create({ data: { name: 'Burgers & Sandwiches', description: 'Gourmet burgers and deli sandwiches', icon: 'Sandwich', displayOrder: 4 } });
-  const catBeverages = await prisma.menuCategory.create({ data: { name: 'Beverages & Shakes', description: 'Artisanal coffees, shakes & mocktails', icon: 'Coffee', displayOrder: 5 } });
-  const catDesserts = await prisma.menuCategory.create({ data: { name: 'Desserts', description: 'Sweet indulgences & pastries', icon: 'IceCream', displayOrder: 6 } });
+  // 8. Menu Categories & Items (180 Items across 6 Categories)
+  const categoryDefs = [
+    { name: 'Starters', description: 'Appetizers & finger foods', icon: 'Utensils', displayOrder: 1 },
+    { name: 'Main Course', description: 'Hearty Indian & Global mains', icon: 'Soup', displayOrder: 2 },
+    { name: 'Pizza & Pasta', description: 'Wood-fired pizzas and pasta', icon: 'Pizza', displayOrder: 3 },
+    { name: 'Burgers & Sandwiches', description: 'Gourmet burgers and deli sandwiches', icon: 'Sandwich', displayOrder: 4 },
+    { name: 'Beverages & Shakes', description: 'Artisanal coffees, shakes & mocktails', icon: 'Coffee', displayOrder: 5 },
+    { name: 'Desserts', description: 'Sweet indulgences & pastries', icon: 'IceCream', displayOrder: 6 },
+  ];
 
-  const itemPizza = await prisma.menuItem.create({
-    data: {
-      categoryId: catPizza.id,
-      name: 'Paneer Tikka Pizza',
-      description: 'Mozzarella, spiced paneer cubes, capsicum, onions, and signature makhani sauce.',
-      price: 420,
-      costPrice: 145,
-      taxRate: 5.0,
-      isVeg: true,
-      isBestSeller: true,
-      prepTimeMinutes: 20,
-      image: 'https://images.unsplash.com/photo-1534308983496-4fabb1a015ee?auto=format&fit=crop&w=600&q=80',
-    },
-  });
+  const categoryMap: Record<string, any> = {};
+  for (const cDef of categoryDefs) {
+    const cat = await prisma.menuCategory.create({
+      data: {
+        name: cDef.name,
+        description: cDef.description,
+        icon: cDef.icon,
+        displayOrder: cDef.displayOrder,
+      },
+    });
+    categoryMap[cDef.name] = cat;
+  }
 
-  const itemCoffee = await prisma.menuItem.create({
-    data: {
-      categoryId: catBeverages.id,
-      name: 'Signature Cold Coffee',
-      description: 'Double espresso blended with rich cream, dark cocoa, vanilla scoop, and whipped cream.',
-      price: 220,
-      costPrice: 65,
-      taxRate: 5.0,
-      isVeg: true,
-      isBestSeller: true,
-      prepTimeMinutes: 8,
-      image: 'https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&w=600&q=80',
-    },
-  });
+  const createdMenuItems: Record<string, any> = {};
+  for (const item of menuSeedData) {
+    const category = categoryMap[item.category];
+    if (!category) continue;
 
-  const itemPaneerButter = await prisma.menuItem.create({
-    data: {
-      categoryId: catMains.id,
-      name: 'Paneer Butter Masala',
-      description: 'Cottage cheese simmered in a velvety tomato, cream, and butter sauce with aromatic spices.',
-      price: 380,
-      costPrice: 130,
-      taxRate: 5.0,
-      isVeg: true,
-      isBestSeller: true,
-      prepTimeMinutes: 18,
-      image: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=600&q=80',
-    },
-  });
+    const createdItem = await prisma.menuItem.create({
+      data: {
+        categoryId: category.id,
+        name: item.name,
+        description: item.description,
+        price: item.price,
+        costPrice: item.costPrice,
+        taxRate: item.taxRate || 5.0,
+        isVeg: item.isVeg,
+        isBestSeller: item.isBestSeller || false,
+        prepTimeMinutes: item.prepTimeMinutes,
+        image: item.image,
+      },
+    });
 
-  const itemNaan = await prisma.menuItem.create({
-    data: {
-      categoryId: catMains.id,
-      name: 'Butter Garlic Naan',
-      description: 'Refined flour flatbread brushed with garlic butter and fresh coriander cooked in tandoor.',
-      price: 75,
-      costPrice: 18,
-      taxRate: 5.0,
-      isVeg: true,
-      isBestSeller: false,
-      prepTimeMinutes: 10,
-      image: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?auto=format&fit=crop&w=600&q=80',
-    },
-  });
+    createdMenuItems[item.name] = createdItem;
+  }
 
-  const itemSandwich = await prisma.menuItem.create({
-    data: {
-      categoryId: catBurgers.id,
-      name: 'Club Veg Supreme Sandwich',
-      description: 'Triple decker toasted sandwich with grilled vegetables, cheese slice, mint chutney & fries.',
-      price: 260,
-      costPrice: 85,
-      taxRate: 5.0,
-      isVeg: true,
-      isBestSeller: false,
-      prepTimeMinutes: 12,
-      image: 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=600&q=80',
-    },
-  });
-
-  const itemBrownie = await prisma.menuItem.create({
-    data: {
-      categoryId: catDesserts.id,
-      name: 'Sizzling Chocolate Brownie',
-      description: 'Warm fudge brownie served on a sizzler plate with vanilla ice cream and hot chocolate fudge.',
-      price: 280,
-      costPrice: 90,
-      taxRate: 5.0,
-      isVeg: true,
-      isBestSeller: true,
-      prepTimeMinutes: 10,
-      image: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=600&q=80',
-    },
-  });
-
-  console.log('✅ Restaurant Menu created');
+  console.log(`✅ ${menuSeedData.length} Menu Items created across 6 categories`);
 
   // 9. Ingredients & Recipes
   const ingFlour = await prisma.ingredient.create({ data: { name: 'Refined Flour (Maida)', category: 'Flour', unit: 'kg', currentStock: 45.0, minimumStock: 15.0, purchasePrice: 40 } });
@@ -597,38 +754,46 @@ async function main() {
   const ingTomatoes = await prisma.ingredient.create({ data: { name: 'Fresh Tomatoes', category: 'Produce', unit: 'kg', currentStock: 25.0, minimumStock: 10.0, purchasePrice: 35 } });
   const ingButter = await prisma.ingredient.create({ data: { name: 'Amul Butter', category: 'Dairy', unit: 'kg', currentStock: 12.0, minimumStock: 5.0, purchasePrice: 520 } });
 
-  // Recipe for Paneer Pizza
-  const recPizza = await prisma.recipe.create({
-    data: {
-      menuItemId: itemPizza.id,
-      name: 'Paneer Tikka Pizza Recipe',
-      instructions: 'Prepare dough with flour, roll to 10 inch, spread pizza sauce, add mozzarella and paneer cubes, bake at 280C for 8 minutes.',
-    },
-  });
+  const itemPizza = createdMenuItems['Paneer Tikka Pizza'] || Object.values(createdMenuItems)[0];
+  const itemCoffee = createdMenuItems['Signature Cold Coffee'] || Object.values(createdMenuItems)[1];
+  const itemPaneerButter = createdMenuItems['Paneer Butter Masala'] || Object.values(createdMenuItems)[2];
 
-  await prisma.recipeIngredient.createMany({
-    data: [
-      { recipeId: recPizza.id, ingredientId: ingFlour.id, quantityRequired: 0.2, unit: 'kg' },
-      { recipeId: recPizza.id, ingredientId: ingCheese.id, quantityRequired: 0.1, unit: 'kg' },
-      { recipeId: recPizza.id, ingredientId: ingPaneer.id, quantityRequired: 0.08, unit: 'kg' },
-    ],
-  });
+  // Recipe for Paneer Pizza
+  if (itemPizza) {
+    const recPizza = await prisma.recipe.create({
+      data: {
+        menuItemId: itemPizza.id,
+        name: 'Paneer Tikka Pizza Recipe',
+        instructions: 'Prepare dough with flour, roll to 10 inch, spread pizza sauce, add mozzarella and paneer cubes, bake at 280C for 8 minutes.',
+      },
+    });
+
+    await prisma.recipeIngredient.createMany({
+      data: [
+        { recipeId: recPizza.id, ingredientId: ingFlour.id, quantityRequired: 0.2, unit: 'kg' },
+        { recipeId: recPizza.id, ingredientId: ingCheese.id, quantityRequired: 0.1, unit: 'kg' },
+        { recipeId: recPizza.id, ingredientId: ingPaneer.id, quantityRequired: 0.08, unit: 'kg' },
+      ],
+    });
+  }
 
   // Recipe for Cold Coffee
-  const recCoffee = await prisma.recipe.create({
-    data: {
-      menuItemId: itemCoffee.id,
-      name: 'Cold Coffee Recipe',
-      instructions: 'Blend 250ml milk with 15g coffee powder and 20g sugar, add ice cubes and top with cocoa powder.',
-    },
-  });
+  if (itemCoffee) {
+    const recCoffee = await prisma.recipe.create({
+      data: {
+        menuItemId: itemCoffee.id,
+        name: 'Cold Coffee Recipe',
+        instructions: 'Blend 250ml milk with 15g coffee powder and 20g sugar, add ice cubes and top with cocoa powder.',
+      },
+    });
 
-  await prisma.recipeIngredient.createMany({
-    data: [
-      { recipeId: recCoffee.id, ingredientId: ingMilk.id, quantityRequired: 0.25, unit: 'l' },
-      { recipeId: recCoffee.id, ingredientId: ingCoffee.id, quantityRequired: 0.015, unit: 'kg' },
-    ],
-  });
+    await prisma.recipeIngredient.createMany({
+      data: [
+        { recipeId: recCoffee.id, ingredientId: ingMilk.id, quantityRequired: 0.25, unit: 'l' },
+        { recipeId: recCoffee.id, ingredientId: ingCoffee.id, quantityRequired: 0.015, unit: 'kg' },
+      ],
+    });
+  }
 
   console.log('✅ Ingredients & Recipes created');
 
@@ -649,12 +814,14 @@ async function main() {
     },
   });
 
-  await prisma.foodOrderItem.createMany({
-    data: [
-      { orderId: order1.id, menuItemId: itemPizza.id, quantity: 1, unitPrice: 420, totalPrice: 420 },
-      { orderId: order1.id, menuItemId: itemCoffee.id, quantity: 1, unitPrice: 220, totalPrice: 220 },
-    ],
-  });
+  if (itemPizza && itemCoffee) {
+    await prisma.foodOrderItem.createMany({
+      data: [
+        { orderId: order1.id, menuItemId: itemPizza.id, quantity: 1, unitPrice: 420, totalPrice: 420 },
+        { orderId: order1.id, menuItemId: itemCoffee.id, quantity: 1, unitPrice: 220, totalPrice: 220 },
+      ],
+    });
+  }
 
   // Order 2: Table Order (T-01) - NEW state for KDS
   const order2 = await prisma.foodOrder.create({
@@ -671,13 +838,14 @@ async function main() {
     },
   });
 
-  await prisma.foodOrderItem.createMany({
-    data: [
-      { orderId: order2.id, menuItemId: itemPaneerButter.id, quantity: 1, unitPrice: 380, totalPrice: 380 },
-      { orderId: order2.id, menuItemId: itemNaan.id, quantity: 2, unitPrice: 75, totalPrice: 150 },
-      { orderId: order2.id, menuItemId: itemCoffee.id, quantity: 1, unitPrice: 220, totalPrice: 220 },
-    ],
-  });
+  if (itemPaneerButter && itemCoffee) {
+    await prisma.foodOrderItem.createMany({
+      data: [
+        { orderId: order2.id, menuItemId: itemPaneerButter.id, quantity: 1, unitPrice: 380, totalPrice: 380 },
+        { orderId: order2.id, menuItemId: itemCoffee.id, quantity: 1, unitPrice: 220, totalPrice: 220 },
+      ],
+    });
+  }
 
   console.log('✅ Active Food Orders & KDS queue created');
 
@@ -781,6 +949,199 @@ async function main() {
       },
     ],
   });
+
+  // 14. Suppliers & Products & Purchases
+  const supDairy = await prisma.supplier.create({
+    data: {
+      name: 'Amul Dairy Distributors',
+      contactPerson: 'Suresh Patel',
+      email: 'suresh@amuldairy.com',
+      phone: '+91 98240 55112',
+      category: 'Food / Dairy',
+      status: 'Active',
+      address: 'GIDC Industrial Estate, Anand, Gujarat',
+      notes: 'Primary supplier for milk, butter, cheese, and cream. Delivery schedule every Monday and Thursday.',
+    },
+  });
+
+  const supBeverage = await prisma.supplier.create({
+    data: {
+      name: 'Himalayan Beverage Traders',
+      contactPerson: 'Vikram Joshi',
+      email: 'orders@himalayanbeverages.in',
+      phone: '+91 97112 88990',
+      category: 'Beverage',
+      status: 'Active',
+      address: 'Plot 45, Okhla Phase III, New Delhi',
+      notes: 'Supplies mineral water, soft drinks, juices, energy drinks, and packaged water.',
+    },
+  });
+
+  const supLinen = await prisma.supplier.create({
+    data: {
+      name: 'Royal Linen & Textile Mills',
+      contactPerson: 'Manish Verma',
+      email: 'sales@royallinen.co.in',
+      phone: '+91 98910 22334',
+      category: 'Linen',
+      status: 'Active',
+      address: 'Ring Road Industrial Area, Surat, Gujarat',
+      notes: 'Premium 400 TC bed sheets, duvet covers, plush bath towels, and bathrobes.',
+    },
+  });
+
+  const supCleaning = await prisma.supplier.create({
+    data: {
+      name: 'CleanPro Hygiene Solutions',
+      contactPerson: 'Pooja Nair',
+      email: 'support@cleanprohygiene.com',
+      phone: '+91 98450 77661',
+      category: 'Cleaning',
+      status: 'Active',
+      address: 'Whitefield Industrial Zone, Bengaluru, Karnataka',
+      notes: 'Eco-friendly housekeeping chemicals, sanitizers, and floor care solutions.',
+    },
+  });
+
+  const supEquipment = await prisma.supplier.create({
+    data: {
+      name: 'Apex Commercial Kitchen Equipments',
+      contactPerson: 'Rohan Deshmukh',
+      email: 'info@apexkitchen.in',
+      phone: '+91 98201 33445',
+      category: 'Equipment',
+      status: 'Active',
+      address: 'MIDC Andheri East, Mumbai, Maharashtra',
+      notes: 'Kitchen burners, dishwashers, ovens, and refrigeration units.',
+    },
+  });
+
+  // Seed Amul Products
+  const milkProd = await prisma.supplierProduct.create({
+    data: { supplierId: supDairy.id, name: 'Full Cream Milk', category: 'Dairy', type: 'PRODUCT', unit: 'Liter', purchasePrice: 68, moq: 20, reorderLevel: 30, currentStock: 20, taxRate: 0, status: 'ACTIVE' },
+  });
+  await prisma.supplierProduct.createMany({
+    data: [
+      { supplierId: supDairy.id, name: 'Buttermilk', category: 'Dairy', type: 'PRODUCT', unit: '500 ml', purchasePrice: 20, moq: 50, reorderLevel: 30, currentStock: 60, taxRate: 0, status: 'ACTIVE' },
+      { supplierId: supDairy.id, name: 'Butter', category: 'Dairy', type: 'PRODUCT', unit: '100 g', purchasePrice: 58, moq: 20, reorderLevel: 10, currentStock: 15, taxRate: 0, status: 'ACTIVE' },
+      { supplierId: supDairy.id, name: 'Curd', category: 'Dairy', type: 'PRODUCT', unit: 'Kg', purchasePrice: 70, moq: 20, reorderLevel: 15, currentStock: 25, taxRate: 0, status: 'ACTIVE' },
+      { supplierId: supDairy.id, name: 'Paneer', category: 'Dairy', type: 'PRODUCT', unit: 'Kg', purchasePrice: 400, moq: 10, reorderLevel: 8, currentStock: 12, taxRate: 0, status: 'ACTIVE' },
+      { supplierId: supDairy.id, name: 'Cheese', category: 'Dairy', type: 'PRODUCT', unit: 'Kg', purchasePrice: 450, moq: 5, reorderLevel: 5, currentStock: 7, taxRate: 0, status: 'ACTIVE' },
+      { supplierId: supDairy.id, name: 'Ice Cream', category: 'Dairy', type: 'PRODUCT', unit: 'Liter', purchasePrice: 250, moq: 10, reorderLevel: 8, currentStock: 10, taxRate: 0, status: 'ACTIVE' },
+    ],
+  });
+
+  // Seed Royal Linen Products
+  await prisma.supplierProduct.createMany({
+    data: [
+      { supplierId: supLinen.id, name: 'Bed Sheets', category: 'Linen', type: 'PRODUCT', unit: 'Pcs', purchasePrice: 650, moq: 20, reorderLevel: 25, currentStock: 30, taxRate: 12, status: 'ACTIVE' },
+      { supplierId: supLinen.id, name: 'Pillow Covers', category: 'Linen', type: 'PRODUCT', unit: 'Pair', purchasePrice: 180, moq: 30, reorderLevel: 40, currentStock: 20, taxRate: 12, status: 'ACTIVE' },
+      { supplierId: supLinen.id, name: 'Bath Towels', category: 'Linen', type: 'PRODUCT', unit: 'Pcs', purchasePrice: 380, moq: 20, reorderLevel: 30, currentStock: 50, taxRate: 12, status: 'ACTIVE' },
+      { supplierId: supLinen.id, name: 'Hand Towels', category: 'Linen', type: 'PRODUCT', unit: 'Pcs', purchasePrice: 140, moq: 30, reorderLevel: 40, currentStock: 45, taxRate: 12, status: 'ACTIVE' },
+      { supplierId: supLinen.id, name: 'Curtains', category: 'Linen', type: 'PRODUCT', unit: 'Set', purchasePrice: 1800, moq: 5, reorderLevel: 10, currentStock: 12, taxRate: 12, status: 'ACTIVE' },
+      { supplierId: supLinen.id, name: 'Table Cloth', category: 'Linen', type: 'PRODUCT', unit: 'Pcs', purchasePrice: 320, moq: 15, reorderLevel: 20, currentStock: 25, taxRate: 12, status: 'ACTIVE' },
+      { supplierId: supLinen.id, name: 'Napkins', category: 'Linen', type: 'PRODUCT', unit: 'Pack of 10', purchasePrice: 250, moq: 10, reorderLevel: 15, currentStock: 18, taxRate: 12, status: 'ACTIVE' },
+      { supplierId: supLinen.id, name: 'Laundry Service', category: 'Linen', type: 'SERVICE', unit: 'Kg', purchasePrice: 45, moq: 50, reorderLevel: 0, currentStock: 0, taxRate: 18, status: 'ACTIVE' },
+    ],
+  });
+
+  // Seed CleanPro Products
+  await prisma.supplierProduct.createMany({
+    data: [
+      { supplierId: supCleaning.id, name: 'Floor Cleaner', category: 'Cleaning', type: 'PRODUCT', unit: 'Liter', purchasePrice: 180, moq: 10, reorderLevel: 15, currentStock: 10, taxRate: 18, status: 'ACTIVE' },
+      { supplierId: supCleaning.id, name: 'Glass Cleaner', category: 'Cleaning', type: 'PRODUCT', unit: 'Liter', purchasePrice: 150, moq: 5, reorderLevel: 10, currentStock: 12, taxRate: 18, status: 'ACTIVE' },
+      { supplierId: supCleaning.id, name: 'Toilet Cleaner', category: 'Cleaning', type: 'PRODUCT', unit: 'Liter', purchasePrice: 160, moq: 10, reorderLevel: 15, currentStock: 8, taxRate: 18, status: 'ACTIVE' },
+      { supplierId: supCleaning.id, name: 'Dishwash Liquid', category: 'Cleaning', type: 'PRODUCT', unit: 'Liter', purchasePrice: 120, moq: 10, reorderLevel: 20, currentStock: 25, taxRate: 18, status: 'ACTIVE' },
+      { supplierId: supCleaning.id, name: 'Hand Wash', category: 'Cleaning', type: 'PRODUCT', unit: 'Liter', purchasePrice: 140, moq: 5, reorderLevel: 10, currentStock: 15, taxRate: 18, status: 'ACTIVE' },
+      { supplierId: supCleaning.id, name: 'Sanitizer', category: 'Cleaning', type: 'PRODUCT', unit: 'Liter', purchasePrice: 200, moq: 5, reorderLevel: 10, currentStock: 18, taxRate: 18, status: 'ACTIVE' },
+      { supplierId: supCleaning.id, name: 'Garbage Bags', category: 'Cleaning', type: 'PRODUCT', unit: 'Pack', purchasePrice: 90, moq: 20, reorderLevel: 30, currentStock: 40, taxRate: 18, status: 'ACTIVE' },
+      { supplierId: supCleaning.id, name: 'Pest Control Service', category: 'Cleaning', type: 'SERVICE', unit: 'Job', purchasePrice: 3500, moq: 1, reorderLevel: 0, currentStock: 0, taxRate: 18, status: 'ACTIVE' },
+    ],
+  });
+
+  // Seed Himalayan Beverage Products
+  await prisma.supplierProduct.createMany({
+    data: [
+      { supplierId: supBeverage.id, name: 'Mineral Water', category: 'Beverage', type: 'PRODUCT', unit: 'Case of 24', purchasePrice: 280, moq: 10, reorderLevel: 15, currentStock: 25, taxRate: 18, status: 'ACTIVE' },
+      { supplierId: supBeverage.id, name: 'Soft Drinks', category: 'Beverage', type: 'PRODUCT', unit: 'Case of 24', purchasePrice: 480, moq: 5, reorderLevel: 10, currentStock: 8, taxRate: 18, status: 'ACTIVE' },
+      { supplierId: supBeverage.id, name: 'Fruit Juice', category: 'Beverage', type: 'PRODUCT', unit: 'Liter', purchasePrice: 110, moq: 10, reorderLevel: 15, currentStock: 20, taxRate: 18, status: 'ACTIVE' },
+      { supplierId: supBeverage.id, name: 'Soda', category: 'Beverage', type: 'PRODUCT', unit: 'Case of 24', purchasePrice: 320, moq: 5, reorderLevel: 10, currentStock: 14, taxRate: 18, status: 'ACTIVE' },
+      { supplierId: supBeverage.id, name: 'Energy Drinks', category: 'Beverage', type: 'PRODUCT', unit: 'Can', purchasePrice: 95, moq: 24, reorderLevel: 30, currentStock: 48, taxRate: 18, status: 'ACTIVE' },
+      { supplierId: supBeverage.id, name: 'Packaged Drinking Water', category: 'Beverage', type: 'PRODUCT', unit: '20L Jar', purchasePrice: 60, moq: 10, reorderLevel: 15, currentStock: 20, taxRate: 18, status: 'ACTIVE' },
+    ],
+  });
+
+  // Seed Apex Commercial Kitchen Products
+  await prisma.supplierProduct.createMany({
+    data: [
+      { supplierId: supEquipment.id, name: 'Refrigerator', category: 'Equipment', type: 'PRODUCT', unit: 'Unit', purchasePrice: 65000, moq: 1, reorderLevel: 1, currentStock: 2, taxRate: 18, status: 'ACTIVE' },
+      { supplierId: supEquipment.id, name: 'Deep Freezer', category: 'Equipment', type: 'PRODUCT', unit: 'Unit', purchasePrice: 42000, moq: 1, reorderLevel: 1, currentStock: 1, taxRate: 18, status: 'ACTIVE' },
+      { supplierId: supEquipment.id, name: 'Commercial Oven', category: 'Equipment', type: 'PRODUCT', unit: 'Unit', purchasePrice: 85000, moq: 1, reorderLevel: 1, currentStock: 2, taxRate: 18, status: 'ACTIVE' },
+      { supplierId: supEquipment.id, name: 'Microwave', category: 'Equipment', type: 'PRODUCT', unit: 'Unit', purchasePrice: 18000, moq: 1, reorderLevel: 2, currentStock: 3, taxRate: 18, status: 'ACTIVE' },
+      { supplierId: supEquipment.id, name: 'Mixer Grinder', category: 'Equipment', type: 'PRODUCT', unit: 'Unit', purchasePrice: 12000, moq: 1, reorderLevel: 2, currentStock: 4, taxRate: 18, status: 'ACTIVE' },
+      { supplierId: supEquipment.id, name: 'Induction', category: 'Equipment', type: 'PRODUCT', unit: 'Unit', purchasePrice: 8500, moq: 2, reorderLevel: 2, currentStock: 2, taxRate: 18, status: 'ACTIVE' },
+      { supplierId: supEquipment.id, name: 'Coffee Machine', category: 'Equipment', type: 'PRODUCT', unit: 'Unit', purchasePrice: 120000, moq: 1, reorderLevel: 1, currentStock: 1, taxRate: 18, status: 'ACTIVE' },
+    ],
+  });
+
+  // Purchases for Suppliers
+  await prisma.purchase.createMany({
+    data: [
+      {
+        supplierId: supDairy.id,
+        productId: milkProd.id,
+        itemNames: 'Full Cream Milk',
+        quantity: '50 Liter',
+        unitPrice: 68,
+        taxAmount: 0,
+        totalCost: 3400,
+        status: 'RECEIVED',
+        notes: 'Chilled delivery morning batch.',
+      },
+      {
+        supplierId: supDairy.id,
+        itemNames: 'Buttermilk & Amul Butter Bulk Order',
+        quantity: '60 units',
+        unitPrice: 58,
+        taxAmount: 0,
+        totalCost: 4680,
+        status: 'PENDING',
+        notes: 'Expected delivery tomorrow morning 8:00 AM.',
+      },
+      {
+        supplierId: supBeverage.id,
+        itemNames: 'Mineral Water Case x 25',
+        quantity: '25 Cases',
+        unitPrice: 280,
+        taxAmount: 1260,
+        totalCost: 8260,
+        status: 'RECEIVED',
+        notes: 'Batch #MW-2026-99',
+      },
+      {
+        supplierId: supLinen.id,
+        itemNames: '400TC White Bed Sheets & Pillow Covers',
+        quantity: '50 sets',
+        unitPrice: 650,
+        taxAmount: 3900,
+        totalCost: 36400,
+        status: 'RECEIVED',
+        notes: 'Delivered for room refurbishment.',
+      },
+      {
+        supplierId: supCleaning.id,
+        itemNames: 'Floor Cleaner & Toilet Cleaner Bulk Supply',
+        quantity: '20 Canisters',
+        unitPrice: 180,
+        taxAmount: 648,
+        totalCost: 4248,
+        status: 'RECEIVED',
+        notes: 'Eco-certified cleaning supplies.',
+      },
+    ],
+  });
+
+  console.log('✅ 5 Suppliers with realistic products and purchase records created successfully');
 
   console.log('🎉 HOTELNEX AI Seed Script completed successfully!');
 }
