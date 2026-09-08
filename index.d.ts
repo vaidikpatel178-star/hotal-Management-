@@ -1,4 +1,7 @@
-import * as z from "./v3/external.js";
-export * from "./v3/external.js";
-export { z };
-export default z;
+declare const raf: {
+    (callback: (timestamp: number) => void): number;
+    cancel: (handle: number) => void;
+    polyfill: (globalObject?: any) => void;
+};
+
+export = raf;
