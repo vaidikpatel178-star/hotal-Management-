@@ -16,15 +16,45 @@
       "static/chunks/main-app.js",
       "static/chunks/app/dashboard/page.js"
     ],
-    "/payments/page": [
+    "/guest-requests/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/payments/page.js"
+      "static/chunks/app/guest-requests/page.js"
     ],
-    "/invoices/page": [
+    "/login/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/invoices/page.js"
+      "static/chunks/app/login/page.js"
+    ],
+    "/staff-dashboard/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/staff-dashboard/page.js"
+    ],
+    "/guest-management/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/guest-management/page.js"
+    ],
+    "/guest-crm/rewards/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/guest-crm/rewards/page.js"
+    ],
+    "/guest-crm/feedback/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/guest-crm/feedback/page.js"
+    ],
+    "/hall-management/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/hall-management/page.js"
+    ],
+    "/events/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/events/page.js"
     ]
   }
 }
